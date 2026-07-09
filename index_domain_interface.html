@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Domaine polygonal FHW</title>
+    <style>
+        :root {
+            --bg: #f7f8fb;
+            --panel: #ffffff;
+            --ink: #172033;
+            --muted: #647084;
+            --line: #d9dee8;
+            --soft: #eef2f7;
+            --outer: #2563eb;
+            --hole: #dc2626;
+            --active: #0891b2;
+            --ok: #16a34a;
+            --error: #dc2626;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        button,
+        input {
+            font: inherit;
+        }
+
+        button {
+            border: 0;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            cursor: not-allowed;
+        }
+
+        .page {
+            width: min(1120px, calc(100vw - 32px));
+            margin: 0 auto;
+            padding: 28px 0 34px;
+        }
+
+        .topbar {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            align-items: end;
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+
+        h1 {
+            margin: 0 0 4px;
+            font-size: 28px;
+            letter-spacing: 0;
+        }
+
+        .subtitle {
+            margin: 0;
+            color: var(--muted);
+            font-size: 15px;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 560px 1fr;
+            gap: 20px;
+            align-items: start;
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            box-shadow: 0 6px 16px rgb(23 32 51 / 0.06);
+        }
+
+        .canvas-panel {
+            padding: 20px;
+        }
+
+        #canvasContainer {
+            position: relative;
+            width: 500px;
+            height: 500px;
+            margin: 0 auto;
+            border-radius: 50%;
+            overflow: hidden;
+            background: transparent;
+        }
+
+        #complexCanvas {
+            display: block;
+            width: 500px;
+            height: 500px;
+        }
+
+        .origin-cross {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 12px;
+            height: 12px;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+
+        .origin-cross::before,
+        .origin-cross::after {
+            content: "";
+            position: absolute;
+            background: #8a95a8;
+        }
+
+        .origin-cross::before {
+            left: 0;
+            right: 0;
+            top: 50%;
+            height: 2px;
+            transform: translateY(-50%);
+        }
+
+        .origin-cross::after {
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            width: 2px;
+            transform: translateX(-50%);
+        }
+
+        .side {
+            display: grid;
+            gap: 14px;
+        }
+
+        .section {
+            padding: 16px;
+        }
+
+        .section-title {
+            margin: 0 0 12px;
+            font-size: 16px;
+        }
+
+        .status-row {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .status-light {
+            width: 24px;
+            height: 24px;
+            border-radius: 999px;
+            background: #c8d0dd;
+            box-shadow: inset 0 0 8px rgb(0 0 0 / 0.12);
+        }
+
+        .status-light.green {
+            background: var(--ok);
+            box-shadow: 0 0 12px rgb(22 163 74 / 0.55);
+        }
+
+        .status-light.red {
+            background: var(--error);
+            box-shadow: 0 0 12px rgb(220 38 38 / 0.55);
+        }
+
+        #statusMessage {
+            margin: 0;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        #statusMessage.error {
+            color: var(--error);
+            font-weight: 650;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 10px;
+            align-items: end;
+        }
+
+        .number-control {
+            display: grid;
+            grid-template-columns: 38px minmax(0, 1fr) 38px;
+            gap: 6px;
+            align-items: center;
+        }
+
+        label {
+            display: grid;
+            gap: 6px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            height: 38px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 0 10px;
+            color: var(--ink);
+            background: #fff;
+            text-align: center;
+        }
+
+        .button-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            min-height: 38px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            background: var(--soft);
+            color: var(--ink);
+            font-weight: 650;
+        }
+
+        .btn.primary {
+            background: var(--outer);
+            color: #fff;
+        }
+
+        .btn.danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .btn:disabled {
+            background: #e7ebf2;
+            color: #9aa4b4;
+        }
+
+        .btn.icon {
+            width: 38px;
+            padding: 0;
+            font-size: 18px;
+            line-height: 1;
+        }
+
+        .stage-grid {
+            display: grid;
+            gap: 8px;
+        }
+
+        .stage-item {
+            display: grid;
+            grid-template-columns: 22px 1fr auto;
+            gap: 8px;
+            align-items: center;
+            min-height: 32px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 999px;
+            background: #cbd5e1;
+            justify-self: center;
+        }
+
+        .stage-item.active {
+            color: var(--ink);
+            font-weight: 650;
+        }
+
+        .stage-item.active .dot {
+            background: var(--active);
+        }
+
+        .stage-item.done .dot {
+            background: var(--ok);
+        }
+
+        .stage-count {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .coordinates {
+            height: 190px;
+            overflow-y: auto;
+            padding: 12px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            background: #f8fafc;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 12px;
+            line-height: 1.55;
+            color: #39465a;
+        }
+
+        .coordinates ul {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .coord-heading {
+            margin-top: 8px;
+            color: var(--ink);
+            font-weight: 700;
+        }
+
+        .coord-heading:first-child {
+            margin-top: 0;
+        }
+
+        .coord-point {
+            padding-left: 12px;
+        }
+
+        .empty {
+            color: #8792a5;
+            font-style: italic;
+        }
+
+        @media (max-width: 940px) {
+            .topbar,
+            .layout {
+                grid-template-columns: 1fr;
+            }
+
+            .canvas-panel {
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <div class="topbar">
+            <div>
+                <h1>Domaine polygonal FHW</h1>
+                <p class="subtitle">Bord extérieur et trous polygonaux dans le disque unité.</p>
+            </div>
+            <div class="button-row">
+                <button id="exportBtn" class="btn primary" disabled>Exporter domain.json</button>
+                <button id="resetCurrentBtn" class="btn" disabled>Effacer le tracé</button>
+                <button id="resetAllBtn" class="btn danger">Recommencer</button>
+            </div>
+        </div>
+
+        <div class="layout">
+            <section class="panel canvas-panel">
+                <div id="canvasContainer">
+                    <canvas id="complexCanvas" width="500" height="500"></canvas>
+                    <div class="origin-cross"></div>
+                </div>
+            </section>
+
+            <aside class="side">
+                <section class="panel section">
+                    <div class="status-row">
+                        <div id="statusIndicator" class="status-light green"></div>
+                        <p id="statusMessage">Choisir le nombre de trous.</p>
+                    </div>
+                </section>
+
+                <section class="panel section">
+                    <h2 class="section-title">Paramètres</h2>
+                    <div class="controls">
+                        <label>
+                            Nombre de trous
+                            <span class="number-control">
+                                <button id="decrementHoleBtn" type="button" class="btn icon">-</button>
+                                <input id="holeCountInput" type="number" min="0" max="20" step="1" value="0">
+                                <button id="incrementHoleBtn" type="button" class="btn icon">+</button>
+                            </span>
+                        </label>
+                        <button id="startBtn" class="btn primary">Valider</button>
+                    </div>
+                </section>
+
+                <section class="panel section">
+                    <h2 class="section-title">Composantes</h2>
+                    <div id="stageList" class="stage-grid"></div>
+                </section>
+
+                <section class="panel section">
+                    <h2 class="section-title">Coordonnées</h2>
+                    <div class="coordinates">
+                        <ul id="coordinatesList">
+                            <li class="empty">Aucun point saisi.</li>
+                        </ul>
+                    </div>
+                </section>
+            </aside>
+        </div>
+    </main>
+
+    <script>
+        const canvas = document.getElementById("complexCanvas");
+        const ctx = canvas.getContext("2d");
+        const canvasContainer = document.getElementById("canvasContainer");
+
+        const statusIndicator = document.getElementById("statusIndicator");
+        const statusMessage = document.getElementById("statusMessage");
+        const holeCountInput = document.getElementById("holeCountInput");
+        const decrementHoleBtn = document.getElementById("decrementHoleBtn");
+        const incrementHoleBtn = document.getElementById("incrementHoleBtn");
+        const startBtn = document.getElementById("startBtn");
+        const exportBtn = document.getElementById("exportBtn");
+        const resetCurrentBtn = document.getElementById("resetCurrentBtn");
+        const resetAllBtn = document.getElementById("resetAllBtn");
+        const stageList = document.getElementById("stageList");
+        const coordinatesList = document.getElementById("coordinatesList");
+
+        const RADIUS = canvas.width / 2;
+        const CENTER = { x: RADIUS, y: RADIUS };
+        const CLOSE_THRESHOLD = 0.05;
+        const GEOMETRY_EPS = 1.0e-10;
+        const ORIGIN = { x: 0, y: 0 };
+
+        let requestedHoleCount = 0;
+        let currentStage = "choose_holes_count";
+        let currentHoleIndex = 0;
+        let currentPoints = [];
+
+        const domain = {
+            outerBoundary: null,
+            holes: []
+        };
+
+        function pxToComplex(px, py) {
+            return {
+                x: (px - CENTER.x) / RADIUS,
+                y: -(py - CENTER.y) / RADIUS
+            };
+        }
+
+        function complexToPx(point) {
+            return {
+                x: CENTER.x + point.x * RADIUS,
+                y: CENTER.y - point.y * RADIUS
+            };
+        }
+
+        function clonePoint(point) {
+            return { x: point.x, y: point.y };
+        }
+
+        function distSq(a, b) {
+            return (a.x - b.x) ** 2 + (a.y - b.y) ** 2;
+        }
+
+        function norm(point) {
+            return Math.sqrt(point.x ** 2 + point.y ** 2);
+        }
+
+        function samePoint(a, b) {
+            return distSq(a, b) <= GEOMETRY_EPS ** 2;
+        }
+
+        function orientation(a, b, c) {
+            return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+        }
+
+        function pointOnSegment(p, a, b) {
+            if (Math.abs(orientation(a, b, p)) > GEOMETRY_EPS) return false;
+            return (
+                Math.min(a.x, b.x) - GEOMETRY_EPS <= p.x &&
+                p.x <= Math.max(a.x, b.x) + GEOMETRY_EPS &&
+                Math.min(a.y, b.y) - GEOMETRY_EPS <= p.y &&
+                p.y <= Math.max(a.y, b.y) + GEOMETRY_EPS
+            );
+        }
+
+        function segmentsIntersect(a, b, c, d) {
+            const o1 = orientation(a, b, c);
+            const o2 = orientation(a, b, d);
+            const o3 = orientation(c, d, a);
+            const o4 = orientation(c, d, b);
+
+            if (Math.abs(o1) <= GEOMETRY_EPS && pointOnSegment(c, a, b)) return true;
+            if (Math.abs(o2) <= GEOMETRY_EPS && pointOnSegment(d, a, b)) return true;
+            if (Math.abs(o3) <= GEOMETRY_EPS && pointOnSegment(a, c, d)) return true;
+            if (Math.abs(o4) <= GEOMETRY_EPS && pointOnSegment(b, c, d)) return true;
+
+            return (o1 > 0) !== (o2 > 0) && (o3 > 0) !== (o4 > 0);
+        }
+
+        function isAllowedClosureContact(a, b, c, d) {
+            if (!samePoint(b, c)) return false;
+            if (pointOnSegment(d, a, b)) return false;
+            if (pointOnSegment(a, c, d)) return false;
+            return true;
+        }
+
+        function createsSelfIntersection(nextPoint) {
+            const n = currentPoints.length;
+            if (n < 3) return false;
+
+            const a = currentPoints[n - 1];
+            const b = nextPoint;
+            const isClosing = samePoint(nextPoint, currentPoints[0]);
+
+            for (let i = 0; i < n - 2; i += 1) {
+                const c = currentPoints[i];
+                const d = currentPoints[i + 1];
+                if (!segmentsIntersect(a, b, c, d)) continue;
+                if (isClosing && i === 0 && isAllowedClosureContact(a, b, c, d)) {
+                    continue;
+                }
+                return true;
+            }
+            return false;
+        }
+
+        function openPolygon(polygon) {
+            if (polygon.length > 1 && samePoint(polygon[0], polygon[polygon.length - 1])) {
+                return polygon.slice(0, -1);
+            }
+            return polygon.slice();
+        }
+
+        function closePolygon(points) {
+            const open = openPolygon(points).map(clonePoint);
+            if (open.length === 0) return [];
+            open.push(clonePoint(open[0]));
+            return open;
+        }
+
+        function polygonSegments(polygon) {
+            const closed = closePolygon(polygon);
+            const segments = [];
+            for (let i = 0; i < closed.length - 1; i += 1) {
+                segments.push([closed[i], closed[i + 1]]);
+            }
+            return segments;
+        }
+
+        function signedArea(polygon) {
+            const closed = closePolygon(polygon);
+            let area = 0;
+            for (let i = 0; i < closed.length - 1; i += 1) {
+                area += closed[i].x * closed[i + 1].y - closed[i + 1].x * closed[i].y;
+            }
+            return 0.5 * area;
+        }
+
+        function normalizeOrientation(polygon, target) {
+            const closed = closePolygon(polygon);
+            const area = signedArea(closed);
+            const shouldReverse =
+                (target === "counterclockwise" && area < 0) ||
+                (target === "clockwise" && area > 0);
+
+            if (!shouldReverse) return closed;
+
+            const reversedOpen = openPolygon(closed).reverse();
+            return closePolygon(reversedOpen);
+        }
+
+        function windingNumber(point, polygon) {
+            const closed = closePolygon(polygon);
+            let angleSum = 0;
+            for (let i = 0; i < closed.length - 1; i += 1) {
+                const z0 = {
+                    x: closed[i].x - point.x,
+                    y: closed[i].y - point.y
+                };
+                const z1 = {
+                    x: closed[i + 1].x - point.x,
+                    y: closed[i + 1].y - point.y
+                };
+                const dot = z0.x * z1.x + z0.y * z1.y;
+                const det = z0.x * z1.y - z0.y * z1.x;
+                angleSum += Math.atan2(det, dot);
+            }
+            return angleSum / (2 * Math.PI);
+        }
+
+        function pointOnPolygonBoundary(point, polygon) {
+            return polygonSegments(polygon).some(([a, b]) => pointOnSegment(point, a, b));
+        }
+
+        function pointStrictlyInsidePolygon(point, polygon) {
+            if (pointOnPolygonBoundary(point, polygon)) return false;
+            return Math.abs(windingNumber(point, polygon)) > 0.5;
+        }
+
+        function polygonsHaveSegmentIntersection(polyA, polyB) {
+            const segmentsA = polygonSegments(polyA);
+            const segmentsB = polygonSegments(polyB);
+            for (const [a, b] of segmentsA) {
+                for (const [c, d] of segmentsB) {
+                    if (segmentsIntersect(a, b, c, d)) return true;
+                }
+            }
+            return false;
+        }
+
+        function segmentIntersectsPolygon(a, b, polygon) {
+            return polygonSegments(polygon).some(([c, d]) => segmentsIntersect(a, b, c, d));
+        }
+
+        function polygonHasAtLeastThreeDistinctVertices(polygon) {
+            const vertices = openPolygon(polygon);
+            if (vertices.length < 3) return false;
+            const distinct = [];
+            for (const point of vertices) {
+                if (!distinct.some((candidate) => samePoint(candidate, point))) {
+                    distinct.push(point);
+                }
+            }
+            return distinct.length >= 3;
+        }
+
+        function polygonInsideUnitDisk(polygon) {
+            return openPolygon(polygon).every((point) => norm(point) <= 1 + GEOMETRY_EPS);
+        }
+
+        function polygonStrictlyInsidePolygon(inner, outer) {
+            if (polygonsHaveSegmentIntersection(inner, outer)) return false;
+            return openPolygon(inner).every((point) => pointStrictlyInsidePolygon(point, outer));
+        }
+
+        function holeConflict(candidate, existingHole) {
+            if (polygonsHaveSegmentIntersection(candidate, existingHole)) {
+                return "intersection";
+            }
+            const candidateVertex = openPolygon(candidate)[0];
+            const existingVertex = openPolygon(existingHole)[0];
+
+            if (candidateVertex && pointStrictlyInsidePolygon(candidateVertex, existingHole)) {
+                return "candidate_inside_existing";
+            }
+            if (existingVertex && pointStrictlyInsidePolygon(existingVertex, candidate)) {
+                return "existing_inside_candidate";
+            }
+            return "";
+        }
+
+        function validateCompletedPolygon(polygon, role) {
+            if (!polygonHasAtLeastThreeDistinctVertices(polygon)) {
+                return "Le polygone doit contenir au moins trois sommets distincts.";
+            }
+            if (!polygonInsideUnitDisk(polygon)) {
+                return "Un sommet sort du disque unité.";
+            }
+
+            if (role === "outer") {
+                if (!pointStrictlyInsidePolygon(ORIGIN, polygon)) {
+                    return "Le bord extérieur doit contenir l'origine.";
+                }
+                return "";
+            }
+
+            if (!domain.outerBoundary) {
+                return "Le bord extérieur doit être validé avant les trous.";
+            }
+            if (pointStrictlyInsidePolygon(ORIGIN, polygon) || pointOnPolygonBoundary(ORIGIN, polygon)) {
+                return "Un trou ne doit pas contenir l'origine.";
+            }
+            if (polygonsHaveSegmentIntersection(polygon, domain.outerBoundary)) {
+                return "Le trou coupe le bord extérieur.";
+            }
+            if (!openPolygon(polygon).every((point) => pointStrictlyInsidePolygon(point, domain.outerBoundary))) {
+                return "Tous les sommets du trou doivent être strictement dans le bord extérieur.";
+            }
+            for (let i = 0; i < domain.holes.length; i += 1) {
+                const conflict = holeConflict(polygon, domain.holes[i].points);
+                if (conflict === "intersection") {
+                    return `Le trou coupe le trou ${i + 1}.`;
+                }
+                if (conflict === "candidate_inside_existing") {
+                    return `Le trou est inclus dans le trou ${i + 1}.`;
+                }
+                if (conflict === "existing_inside_candidate") {
+                    return `Le trou contient le trou ${i + 1}.`;
+                }
+            }
+            return "";
+        }
+
+        function validateNextPointAgainstDomain(point) {
+            if (currentStage !== "draw_hole") return "";
+            if (!domain.outerBoundary) return "";
+
+            if (!pointStrictlyInsidePolygon(point, domain.outerBoundary)) {
+                return "Le sommet du trou doit être strictement dans le bord extérieur.";
+            }
+
+            for (let i = 0; i < domain.holes.length; i += 1) {
+                if (pointStrictlyInsidePolygon(point, domain.holes[i].points) || pointOnPolygonBoundary(point, domain.holes[i].points)) {
+                    return `Le sommet est dans le trou ${i + 1}.`;
+                }
+            }
+
+            if (currentPoints.length === 0) return "";
+
+            const previous = currentPoints[currentPoints.length - 1];
+            if (segmentIntersectsPolygon(previous, point, domain.outerBoundary)) {
+                return "Le segment du trou coupe le bord extérieur.";
+            }
+
+            for (let i = 0; i < domain.holes.length; i += 1) {
+                if (segmentIntersectsPolygon(previous, point, domain.holes[i].points)) {
+                    return `Le segment coupe le trou ${i + 1}.`;
+                }
+            }
+
+            return "";
+        }
+
+        function setStatus(state, message) {
+            statusIndicator.className = `status-light ${state === "red" ? "red" : "green"}`;
+            statusMessage.textContent = message;
+            statusMessage.classList.toggle("error", state === "red");
+        }
+
+        function flashRed(message) {
+            setStatus("red", message);
+            window.setTimeout(() => {
+                if (currentStage !== "ready_to_export") {
+                    setStatus("green", currentStatusText());
+                }
+            }, 1100);
+        }
+
+        function currentStatusText() {
+            if (currentStage === "choose_holes_count") return "Choisir le nombre de trous.";
+            if (currentStage === "draw_outer") return "Saisie du bord extérieur.";
+            if (currentStage === "draw_hole") {
+                return `Saisie du trou ${currentHoleIndex + 1} / ${requestedHoleCount}.`;
+            }
+            return "Domaine valide.";
+        }
+
+        function setDrawingEnabled(enabled) {
+            canvasContainer.style.cursor = enabled ? "crosshair" : "not-allowed";
+        }
+
+        function updateButtons() {
+            const drawing = currentStage === "draw_outer" || currentStage === "draw_hole";
+            const ready = currentStage === "ready_to_export";
+
+            exportBtn.disabled = !ready;
+            resetCurrentBtn.disabled = !drawing || currentPoints.length === 0;
+            holeCountInput.disabled = currentStage !== "choose_holes_count";
+            decrementHoleBtn.disabled = currentStage !== "choose_holes_count";
+            incrementHoleBtn.disabled = currentStage !== "choose_holes_count";
+            startBtn.disabled = currentStage !== "choose_holes_count";
+            setDrawingEnabled(drawing);
+        }
+
+        function stageItems() {
+            const items = [
+                {
+                    key: "outer",
+                    label: "Bord extérieur",
+                    done: Boolean(domain.outerBoundary),
+                    active: currentStage === "draw_outer",
+                    count: domain.outerBoundary ? `${openPolygon(domain.outerBoundary).length} sommets` : ""
+                }
+            ];
+
+            for (let i = 0; i < requestedHoleCount; i += 1) {
+                const hole = domain.holes[i];
+                items.push({
+                    key: `hole_${i + 1}`,
+                    label: `Trou ${i + 1}`,
+                    done: Boolean(hole),
+                    active: currentStage === "draw_hole" && currentHoleIndex === i,
+                    count: hole ? `${openPolygon(hole.points).length} sommets` : ""
+                });
+            }
+            return items;
+        }
+
+        function updateStageList() {
+            stageList.innerHTML = "";
+            if (currentStage === "choose_holes_count") {
+                const item = document.createElement("div");
+                item.className = "stage-item active";
+                item.innerHTML = '<span class="dot"></span><span>Nombre de trous</span><span class="stage-count"></span>';
+                stageList.appendChild(item);
+                return;
+            }
+
+            for (const item of stageItems()) {
+                const row = document.createElement("div");
+                row.className = "stage-item";
+                if (item.done) row.classList.add("done");
+                if (item.active) row.classList.add("active");
+
+                const dot = document.createElement("span");
+                dot.className = "dot";
+
+                const label = document.createElement("span");
+                label.textContent = item.label;
+
+                const count = document.createElement("span");
+                count.className = "stage-count";
+                count.textContent = item.count;
+
+                row.appendChild(dot);
+                row.appendChild(label);
+                row.appendChild(count);
+                stageList.appendChild(row);
+            }
+        }
+
+        function formatDecimal(value) {
+            return value.toFixed(3).replace(".", ",");
+        }
+
+        function formatComplex(point) {
+            const sign = point.y >= 0 ? "+" : "-";
+            return `${formatDecimal(point.x)} ${sign} i*${formatDecimal(Math.abs(point.y))}`;
+        }
+
+        function updateCoordinates() {
+            coordinatesList.innerHTML = "";
+
+            const addLine = (text, className = "") => {
+                const li = document.createElement("li");
+                li.textContent = text;
+                if (className) li.className = className;
+                coordinatesList.appendChild(li);
+            };
+
+            const addPolygon = (heading, polygon) => {
+                addLine(heading, "coord-heading");
+                openPolygon(polygon).forEach((point) => addLine(formatComplex(point), "coord-point"));
+            };
+
+            if (currentPoints.length > 0) {
+                addPolygon(currentStage === "draw_hole" ? `Trou ${currentHoleIndex + 1} en cours` : "Bord extérieur en cours", currentPoints);
+                return;
+            }
+
+            if (!domain.outerBoundary && domain.holes.length === 0) {
+                addLine("Aucun point saisi.", "empty");
+                return;
+            }
+
+            if (domain.outerBoundary) {
+                addPolygon("Bord extérieur", domain.outerBoundary);
+            }
+            domain.holes.forEach((hole, index) => {
+                addPolygon(`Bord intérieur n°${index + 1}`, hole.points);
+            });
+        }
+
+        function drawUnitDisk() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.beginPath();
+            ctx.arc(CENTER.x, CENTER.y, RADIUS - 2, 0, 2 * Math.PI);
+            ctx.fillStyle = "#fbfdff";
+            ctx.fill();
+            ctx.strokeStyle = "#cbd5e1";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(CENTER.x - RADIUS, CENTER.y);
+            ctx.lineTo(CENTER.x + RADIUS, CENTER.y);
+            ctx.moveTo(CENTER.x, CENTER.y - RADIUS);
+            ctx.lineTo(CENTER.x, CENTER.y + RADIUS);
+            ctx.strokeStyle = "#e4e8ef";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+
+        function drawPolygonLine(polygon, color, width, fillColor = null) {
+            if (!polygon || polygon.length === 0) return;
+            const points = polygon.map(complexToPx);
+
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            for (let i = 1; i < points.length; i += 1) {
+                ctx.lineTo(points[i].x, points[i].y);
+            }
+            if (fillColor) {
+                ctx.fillStyle = fillColor;
+                ctx.fill();
+            }
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.stroke();
+        }
+
+        function drawVertices(polygon, color, firstColor) {
+            openPolygon(polygon).forEach((point, index) => {
+                const px = complexToPx(point);
+                ctx.beginPath();
+                ctx.arc(px.x, px.y, index === 0 ? 4.6 : 3.8, 0, 2 * Math.PI);
+                ctx.fillStyle = index === 0 ? firstColor : color;
+                ctx.fill();
+            });
+        }
+
+        function draw() {
+            drawUnitDisk();
+
+            if (domain.outerBoundary) {
+                drawPolygonLine(domain.outerBoundary, "#1d4ed8", 2.2, "rgb(37 99 235 / 0.08)");
+                drawVertices(domain.outerBoundary, "#2563eb", "#1e3a8a");
+            }
+
+            for (const hole of domain.holes) {
+                drawPolygonLine(hole.points, "#dc2626", 2.0, "#fbfdff");
+                drawVertices(hole.points, "#dc2626", "#7f1d1d");
+            }
+
+            if (currentPoints.length > 0) {
+                const color = currentStage === "draw_hole" ? "#f97316" : "#0891b2";
+                drawPolygonLine(currentPoints, color, 2.2);
+                drawVertices(currentPoints, color, "#111827");
+            }
+        }
+
+        function updateUI() {
+            updateButtons();
+            updateStageList();
+            updateCoordinates();
+            draw();
+        }
+
+        function clampHoleCount(value) {
+            if (!Number.isFinite(value)) return 0;
+            return Math.max(0, Math.min(20, Math.trunc(value)));
+        }
+
+        function stepHoleCount(delta) {
+            if (currentStage !== "choose_holes_count") return;
+            const current = Number.parseInt(holeCountInput.value, 10);
+            holeCountInput.value = String(clampHoleCount((Number.isInteger(current) ? current : 0) + delta));
+        }
+
+        function startDomainInput() {
+            const rawValue = Number.parseInt(holeCountInput.value, 10);
+            if (!Number.isInteger(rawValue) || rawValue < 0) {
+                flashRed("Le nombre de trous doit être un entier positif ou nul.");
+                return;
+            }
+            const value = clampHoleCount(rawValue);
+            holeCountInput.value = String(value);
+            requestedHoleCount = value;
+            currentStage = "draw_outer";
+            currentHoleIndex = 0;
+            currentPoints = [];
+            domain.outerBoundary = null;
+            domain.holes = [];
+            setStatus("green", currentStatusText());
+            updateUI();
+        }
+
+        function resetCurrentPolygon() {
+            currentPoints = [];
+            setStatus("green", currentStatusText());
+            updateUI();
+        }
+
+        function resetAll() {
+            requestedHoleCount = 0;
+            currentStage = "choose_holes_count";
+            currentHoleIndex = 0;
+            currentPoints = [];
+            domain.outerBoundary = null;
+            domain.holes = [];
+            holeCountInput.value = "0";
+            setStatus("green", currentStatusText());
+            updateUI();
+        }
+
+        function completeCurrentPolygon(closed) {
+            const role = currentStage === "draw_outer" ? "outer" : "hole";
+            const error = validateCompletedPolygon(closed, role);
+            if (error) {
+                flashRed(error);
+                return;
+            }
+
+            if (role === "outer") {
+                domain.outerBoundary = normalizeOrientation(closed, "counterclockwise");
+                currentPoints = [];
+                if (requestedHoleCount === 0) {
+                    currentStage = "ready_to_export";
+                    setStatus("green", "Domaine valide.");
+                } else {
+                    currentStage = "draw_hole";
+                    currentHoleIndex = 0;
+                    setStatus("green", currentStatusText());
+                }
+            } else {
+                const normalizedHole = normalizeOrientation(closed, "clockwise");
+                domain.holes.push({
+                    label: `hole_${currentHoleIndex + 1}`,
+                    points: normalizedHole
+                });
+                currentPoints = [];
+                currentHoleIndex += 1;
+                if (currentHoleIndex >= requestedHoleCount) {
+                    currentStage = "ready_to_export";
+                    setStatus("green", "Domaine valide.");
+                } else {
+                    setStatus("green", currentStatusText());
+                }
+            }
+            updateUI();
+        }
+
+        function handleCanvasClick(event) {
+            if (currentStage !== "draw_outer" && currentStage !== "draw_hole") return;
+
+            const rect = canvas.getBoundingClientRect();
+            const point = pxToComplex(event.clientX - rect.left, event.clientY - rect.top);
+
+            if (norm(point) > 1 + GEOMETRY_EPS) {
+                flashRed("Point hors du disque unité.");
+                return;
+            }
+
+            if (currentPoints.length >= 3 && distSq(point, currentPoints[0]) < CLOSE_THRESHOLD ** 2) {
+                if (createsSelfIntersection(currentPoints[0])) {
+                    flashRed("La fermeture crée une auto-intersection.");
+                    return;
+                }
+                completeCurrentPolygon(closePolygon(currentPoints));
+                return;
+            }
+
+            const domainError = validateNextPointAgainstDomain(point);
+            if (domainError) {
+                flashRed(domainError);
+                return;
+            }
+
+            if (createsSelfIntersection(point)) {
+                flashRed("Intersection détectée.");
+                return;
+            }
+
+            currentPoints.push(point);
+            setStatus("green", currentStatusText());
+            updateUI();
+        }
+
+        function pointToJson(point) {
+            return {
+                re: point.x,
+                im: point.y
+            };
+        }
+
+        function buildDomainJsonData() {
+            return {
+                format: "FHW_POLYGONAL_DOMAIN",
+                version: 1,
+                bounded_by_unit_disk: true,
+                contains_origin: true,
+                number_of_holes: requestedHoleCount,
+                orientation_convention: {
+                    outer_boundary: "counterclockwise",
+                    holes: "clockwise"
+                },
+                outer_boundary: domain.outerBoundary.map(pointToJson),
+                holes: domain.holes.map((hole, index) => ({
+                    label: hole.label || `hole_${index + 1}`,
+                    points: hole.points.map(pointToJson)
+                }))
+            };
+        }
+
+        function exportDomainJson() {
+            if (currentStage !== "ready_to_export") {
+                flashRed("Le domaine doit être valide avant l'export.");
+                return;
+            }
+
+            const jsonText = JSON.stringify(buildDomainJsonData(), null, 2);
+            const blob = new Blob([jsonText], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "domain.json";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            setStatus("green", "Fichier domain.json exporté.");
+        }
+
+        decrementHoleBtn.addEventListener("click", () => stepHoleCount(-1));
+        incrementHoleBtn.addEventListener("click", () => stepHoleCount(1));
+        holeCountInput.addEventListener("change", () => {
+            holeCountInput.value = String(clampHoleCount(Number.parseInt(holeCountInput.value, 10)));
+        });
+        startBtn.addEventListener("click", startDomainInput);
+        exportBtn.addEventListener("click", exportDomainJson);
+        resetCurrentBtn.addEventListener("click", resetCurrentPolygon);
+        resetAllBtn.addEventListener("click", resetAll);
+        canvas.addEventListener("click", handleCanvasClick);
+
+        resetAll();
+    </script>
+</body>
+</html>
